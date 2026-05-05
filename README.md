@@ -4,6 +4,8 @@ Web Reasoner is a browser-native reasoning workspace. It parses a small
 Datalog-style language, derives new facts from rules, and evaluates queries
 entirely on the client.
 
+Live page: [https://zehrer.github.io/webReasoner/](https://zehrer.github.io/webReasoner/)
+
 ## Features
 
 - In-browser fact and rule editor
