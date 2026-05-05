@@ -251,7 +251,13 @@ code {
   padding: 0 clamp(18px, 4vw, 64px) 44px;
 }
 
+.query-column {
+  display: grid;
+  gap: 14px;
+}
+
 .query-input,
+.language-help,
 .query-results {
   border: 1px solid #d8d3ca;
   border-radius: 8px;
@@ -261,6 +267,58 @@ code {
 
 .query-input {
   padding: 18px;
+}
+
+.language-help {
+  padding: 18px;
+}
+
+.language-help h2 {
+  margin-bottom: 14px;
+}
+
+.help-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.help-grid section {
+  display: grid;
+  gap: 8px;
+}
+
+.help-grid h3 {
+  margin: 0;
+  color: #57655e;
+  font-size: 0.78rem;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.help-grid code {
+  display: block;
+  padding: 8px 10px;
+  border: 1px solid #ece5dc;
+  border-radius: 7px;
+  background: #f9faf7;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.keyword-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.keyword-list span {
+  padding: 6px 9px;
+  border: 1px solid #d2ddd7;
+  border-radius: 999px;
+  color: #315444;
+  background: #edf6f1;
+  font-size: 0.78rem;
+  font-weight: 800;
 }
 
 label {

@@ -67,8 +67,17 @@ Queries:
 what is recommended for Room
 ```
 
+You can also query inferred predicates directly:
+
+```text
+cold(Room)
+recommendedAction(Room, Action)
+```
+
 This style is intentionally constrained. It is meant to be readable and
 predictable, not a general English parser.
+
+Core keywords are `is`, `has`, `when`, `and`, `recommend`, and `for`.
 
 Supported numeric comparisons in conditions are:
 

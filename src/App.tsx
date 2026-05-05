@@ -170,17 +170,57 @@ function App() {
       </section>
 
       <section className="query-band">
-        <div className="query-input">
-          <label htmlFor="query">Query</label>
-          <div>
-            <Search size={18} />
-            <input
-              id="query"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="reachable(home, X)"
-            />
-            <Play size={18} />
+        <div className="query-column">
+          <div className="query-input">
+            <label htmlFor="query">Query</label>
+            <div>
+              <Search size={18} />
+              <input
+                id="query"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="what is recommended for Room"
+              />
+              <Play size={18} />
+            </div>
+          </div>
+
+          <div className="language-help" aria-label="Supported language help">
+            <h2>Supported Language</h2>
+            <div className="help-grid">
+              <section>
+                <h3>Facts</h3>
+                <code>bedroom is cold.</code>
+                <code>bedroom has temperature 16.</code>
+                <code>bedroom has window closed.</code>
+              </section>
+              <section>
+                <h3>Rules</h3>
+                <code>Room is cold when Room has temperature below 18.</code>
+                <code>recommend heatRoom for Room when Room is cold.</code>
+              </section>
+              <section>
+                <h3>Questions</h3>
+                <code>what is recommended for Room?</code>
+                <code>recommendedAction(Room, Action)</code>
+                <code>cold(Room)</code>
+              </section>
+              <section>
+                <h3>Keywords</h3>
+                <div className="keyword-list">
+                  <span>is</span>
+                  <span>has</span>
+                  <span>when</span>
+                  <span>and</span>
+                  <span>recommend</span>
+                  <span>for</span>
+                  <span>below</span>
+                  <span>above</span>
+                  <span>at least</span>
+                  <span>at most</span>
+                </div>
+              </section>
+            </div>
           </div>
         </div>
 
