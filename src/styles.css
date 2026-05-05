@@ -325,6 +325,10 @@ code {
   fill: #2f8060;
 }
 
+.graph-view marker path {
+  fill: #7f9187;
+}
+
 .graph-edge text {
   paint-order: stroke;
   stroke: #fbfaf5;
@@ -335,16 +339,27 @@ code {
   text-anchor: middle;
 }
 
-.graph-node circle {
+.graph-node {
+  cursor: grab;
+  touch-action: none;
+}
+
+.graph-node:active {
+  cursor: grabbing;
+}
+
+.graph-node rect {
   fill: #fffdf8;
   stroke: #315444;
   stroke-width: 2;
+  filter: drop-shadow(0 8px 12px rgba(32, 28, 20, 0.12));
 }
 
 .graph-node text {
   fill: #17201c;
   font-size: 12px;
   font-weight: 800;
+  pointer-events: none;
   text-anchor: middle;
   dominant-baseline: middle;
 }

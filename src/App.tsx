@@ -1,4 +1,16 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  forceCenter,
+  forceCollide,
+  forceLink,
+  forceManyBody,
+  forceSimulation,
+  forceX,
+  forceY,
+  type Simulation,
+  type SimulationLinkDatum,
+  type SimulationNodeDatum,
+} from "d3-force";
 import {
   AlertCircle,
   BrainCircuit,
@@ -25,11 +37,27 @@ type ResultsView = "list" | "graph";
 
 type GraphNode = {
   id: string;
-  x: number;
-  y: number;
 };
 
 type GraphEdge = {
+  id: string;
+  from: string;
+  to: string;
+  label: string;
+  derived: boolean;
+};
+
+type SimulatedNode = SimulationNodeDatum & {
+  id: string;
+};
+
+type SimulatedEdge = SimulationLinkDatum<SimulatedNode> & {
+  id: string;
+  label: string;
+  derived: boolean;
+};
+
+type RenderEdge = {
   id: string;
   from: string;
   to: string;
@@ -309,34 +337,168 @@ function App() {
 }
 
 function GraphView({ nodes, edges }: { nodes: GraphNode[]; edges: GraphEdge[] }) {
+  const width = 720;
+  const height = 480;
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const simulationRef = useRef<Simulation<SimulatedNode, SimulatedEdge> | null>(null);
+  const dragNodeId = useRef<string | null>(null);
+  const [layout, setLayout] = useState<{ nodes: SimulatedNode[]; edges: RenderEdge[] }>({
+    nodes: [],
+    edges: [],
+  });
+
+  useEffect(() => {
+    const simulatedNodes = nodes.map<SimulatedNode>((node, index) => {
+      const angle = (index / Math.max(nodes.length, 1)) * Math.PI * 2 - Math.PI / 2;
+      return {
+        id: node.id,
+        x: width / 2 + Math.cos(angle) * 170,
+        y: height / 2 + Math.sin(angle) * 120,
+      };
+    });
+    const simulatedEdges = edges.map<SimulatedEdge>((edge) => ({
+      id: edge.id,
+      source: edge.from,
+      target: edge.to,
+      label: edge.label,
+      derived: edge.derived,
+    }));
+
+    const simulation = forceSimulation<SimulatedNode, SimulatedEdge>(simulatedNodes)
+      .force(
+        "link",
+        forceLink<SimulatedNode, SimulatedEdge>(simulatedEdges)
+          .id((node) => node.id)
+          .distance(120)
+          .strength(0.38),
+      )
+      .force("charge", forceManyBody<SimulatedNode>().strength(-420))
+      .force("collide", forceCollide<SimulatedNode>().radius((node) => nodeWidth(node.id) / 2 + 26))
+      .force("center", forceCenter(width / 2, height / 2))
+      .force("x", forceX<SimulatedNode>(width / 2).strength(0.04))
+      .force("y", forceY<SimulatedNode>(height / 2).strength(0.05))
+      .on("tick", () => {
+        for (const node of simulatedNodes) {
+          node.x = clamp(node.x ?? width / 2, 54, width - 54);
+          node.y = clamp(node.y ?? height / 2, 34, height - 34);
+        }
+
+        setLayout({
+          nodes: simulatedNodes.map((node) => ({ ...node })),
+          edges: simulatedEdges.map((edge) => ({
+            id: edge.id,
+            from: endpointId(edge.source),
+            to: endpointId(edge.target),
+            label: edge.label,
+            derived: edge.derived,
+          })),
+        });
+      });
+
+    simulationRef.current = simulation;
+
+    return () => {
+      simulation.stop();
+      if (simulationRef.current === simulation) {
+        simulationRef.current = null;
+      }
+    };
+  }, [edges, nodes]);
+
   if (!nodes.length) {
     return <p className="empty-graph">No graphable relationships yet.</p>;
   }
 
-  const nodeLookup = new Map(nodes.map((node) => [node.id, node]));
+  const nodeLookup = new Map(layout.nodes.map((node) => [node.id, node]));
+
+  function beginDrag(nodeId: string, event: React.PointerEvent<SVGGElement>) {
+    const simulationNode = simulationRef.current?.nodes().find((node) => node.id === nodeId);
+    if (!simulationNode) {
+      return;
+    }
+
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragNodeId.current = nodeId;
+    simulationNode.fx = simulationNode.x;
+    simulationNode.fy = simulationNode.y;
+    simulationRef.current?.alphaTarget(0.3).restart();
+  }
+
+  function drag(event: React.PointerEvent<SVGGElement>) {
+    if (!dragNodeId.current) {
+      return;
+    }
+
+    const position = svgPoint(event);
+    const simulationNode = simulationRef.current?.nodes().find((node) => node.id === dragNodeId.current);
+    if (!simulationNode || !position) {
+      return;
+    }
+
+    simulationNode.fx = clamp(position.x, 54, width - 54);
+    simulationNode.fy = clamp(position.y, 34, height - 34);
+  }
+
+  function endDrag(event: React.PointerEvent<SVGGElement>) {
+    if (!dragNodeId.current) {
+      return;
+    }
+
+    const simulationNode = simulationRef.current?.nodes().find((node) => node.id === dragNodeId.current);
+    if (simulationNode) {
+      simulationNode.fx = null;
+      simulationNode.fy = null;
+    }
+
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    dragNodeId.current = null;
+    simulationRef.current?.alphaTarget(0);
+  }
+
+  function svgPoint(event: React.PointerEvent<SVGGElement>) {
+    const svg = svgRef.current;
+    if (!svg) {
+      return null;
+    }
+
+    const point = svg.createSVGPoint();
+    point.x = event.clientX;
+    point.y = event.clientY;
+    return point.matrixTransform(svg.getScreenCTM()?.inverse());
+  }
 
   return (
     <div className="graph-view">
-      <svg viewBox="0 0 720 480" role="img" aria-label="Relationship graph">
+      <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Relationship graph">
         <defs>
           <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
             <path d="M0,0 L8,4 L0,8 Z" />
           </marker>
         </defs>
 
-        {edges.map((edge) => {
+        {layout.edges.map((edge) => {
           const from = nodeLookup.get(edge.from);
           const to = nodeLookup.get(edge.to);
           if (!from || !to) {
             return null;
           }
 
-          const labelX = (from.x + to.x) / 2;
-          const labelY = (from.y + to.y) / 2;
+          const fromX = from.x ?? width / 2;
+          const fromY = from.y ?? height / 2;
+          const toX = to.x ?? width / 2;
+          const toY = to.y ?? height / 2;
+          const labelX = (fromX + toX) / 2;
+          const labelY = (fromY + toY) / 2;
 
           return (
             <g key={edge.id} className={edge.derived ? "graph-edge derived" : "graph-edge"}>
-              <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} markerEnd="url(#arrowhead)" />
+              <line
+                x1={fromX}
+                y1={fromY}
+                x2={toX}
+                y2={toY}
+                markerEnd="url(#arrowhead)"
+              />
               <text x={labelX} y={labelY}>
                 {edge.label}
               </text>
@@ -344,9 +506,17 @@ function GraphView({ nodes, edges }: { nodes: GraphNode[]; edges: GraphEdge[] })
           );
         })}
 
-        {nodes.map((node) => (
-          <g key={node.id} className="graph-node" transform={`translate(${node.x}, ${node.y})`}>
-            <circle r="32" />
+        {layout.nodes.map((node) => (
+          <g
+            key={node.id}
+            className="graph-node"
+            transform={`translate(${node.x ?? width / 2}, ${node.y ?? height / 2})`}
+            onPointerDown={(event) => beginDrag(node.id, event)}
+            onPointerMove={drag}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
+          >
+            <rect x={-nodeWidth(node.id) / 2} y="-20" width={nodeWidth(node.id)} height="40" rx="8" />
             <text>{node.id}</text>
           </g>
         ))}
@@ -388,20 +558,24 @@ function createGraphModel(facts: Fact[]): { nodes: GraphNode[]; edges: GraphEdge
   }
 
   const ids = Array.from(nodeIds).sort();
-  const centerX = 360;
-  const centerY = 240;
-  const radiusX = 270;
-  const radiusY = 165;
-  const nodes = ids.map<GraphNode>((id, index) => {
-    const angle = (index / Math.max(ids.length, 1)) * Math.PI * 2 - Math.PI / 2;
-    return {
-      id,
-      x: centerX + Math.cos(angle) * radiusX,
-      y: centerY + Math.sin(angle) * radiusY,
-    };
-  });
+  const nodes = ids.map<GraphNode>((id) => ({ id }));
 
   return { nodes, edges };
+}
+
+function endpointId(endpoint: string | number | SimulatedNode | undefined): string {
+  if (typeof endpoint === "object" && endpoint) {
+    return endpoint.id;
+  }
+  return String(endpoint ?? "");
+}
+
+function nodeWidth(id: string): number {
+  return Math.max(74, Math.min(150, id.length * 8 + 28));
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }
 
 export default App;
