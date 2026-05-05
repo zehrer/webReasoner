@@ -50,3 +50,8 @@ npm run dev
 ```bash
 npm run build
 ```
+
+## Deployment
+
+GitHub Pages deployment is documented in
+[docs/deployment.md](docs/deployment.md).
