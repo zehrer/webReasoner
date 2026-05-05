@@ -88,7 +88,11 @@ function App() {
           <h1>Web Reasoner</h1>
           <p>
             A client-side logic workspace for facts, rules, inference, and
-            queries. Everything runs in the browser.
+            queries, inspired by{" "}
+            <a href="https://en.wikipedia.org/wiki/Datalog" target="_blank" rel="noreferrer">
+              Datalog
+            </a>
+            . Everything runs in the browser.
           </p>
         </div>
         <div className="signal-panel" aria-label="Reasoning summary">
