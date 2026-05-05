@@ -42,7 +42,7 @@ or number.
 
 ## Examples
 
-The app includes a `Haus Automation` example. It models sensor facts such as
+The app includes a `House Automation` example. It models sensor facts such as
 motion, darkness, temperature, open windows, water leaks, and energy mode.
 Rules then derive recommended actions:
 

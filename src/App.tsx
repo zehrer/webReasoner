@@ -38,7 +38,7 @@ reachable(X, Z) :- link(X, Y), reachable(Y, Z).
 trustedDestination(Y) :- trust(X), reachable(X, Y).`,
   },
   {
-    name: "Haus Automation",
+    name: "House Automation",
     icon: "home",
     query: "recommendedAction(Room, Action)",
     knowledgeBase: `# Facts
