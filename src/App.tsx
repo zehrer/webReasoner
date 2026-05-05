@@ -206,6 +206,9 @@ function App() {
               <section>
                 <h3>Questions</h3>
                 <code>what is recommended for Room?</code>
+                <code>what is cold?</code>
+                <code>which rooms are cold?</code>
+                <code>what has temperature below 18?</code>
                 <code>recommendedAction(Room, Action)</code>
                 <code>cold(Room)</code>
               </section>

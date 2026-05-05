@@ -65,6 +65,9 @@ Queries:
 
 ```text
 what is recommended for Room
+what is cold?
+which rooms are cold?
+what has temperature below 18?
 ```
 
 You can also query inferred predicates directly:

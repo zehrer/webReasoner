@@ -49,6 +49,17 @@ const naturalThresholdConditionPattern =
   /^([A-Z][a-zA-Z0-9_-]*) has ([a-z][a-zA-Z0-9_-]*) (below|above|at least|at most) (-?\d+(?:\.\d+)?)$/;
 const naturalClassificationRulePattern =
   /^([A-Z][a-zA-Z0-9_-]*) is ([a-z][a-zA-Z0-9_-]*) when (.+)$/;
+const naturalStateQueryPattern = /^(?:[Ww]hat|[Ww]ho) is ([a-z][a-zA-Z0-9_-]*)$/;
+const naturalTypedStateQueryPattern =
+  /^[Ww]hich ([a-z][a-zA-Z0-9_-]*)s are ([a-z][a-zA-Z0-9_-]*)$/;
+const naturalBinaryQueryPattern =
+  /^(?:[Ww]hat|[Ww]ho) has ([a-z][a-zA-Z0-9_-]*) ([a-z0-9][a-zA-Z0-9_-]*)$/;
+const naturalTypedBinaryQueryPattern =
+  /^[Ww]hich ([a-z][a-zA-Z0-9_-]*)s have ([a-z][a-zA-Z0-9_-]*) ([a-z0-9][a-zA-Z0-9_-]*)$/;
+const naturalThresholdQueryPattern =
+  /^(?:[Ww]hat|[Ww]ho) has ([a-z][a-zA-Z0-9_-]*) (below|above|at least|at most) (-?\d+(?:\.\d+)?)$/;
+const naturalTypedThresholdQueryPattern =
+  /^[Ww]hich ([a-z][a-zA-Z0-9_-]*)s have ([a-z][a-zA-Z0-9_-]*) (below|above|at least|at most) (-?\d+(?:\.\d+)?)$/;
 
 export function runReasoner(input: string): ReasoningResult {
   const facts = new Map<string, Fact>();
@@ -132,9 +143,10 @@ export function runQuery(query: string, facts: Fact[]): QueryResult {
     return { bindings: [], facts: [] };
   }
 
-  const predicate = parsePredicate(compileQuery(normalized));
-  const bindings = satisfy(predicate, facts, {});
-  const matchingFacts = facts.filter((fact) => canUnify(predicate, fact, {}));
+  const predicates = compileQuery(normalized).map(parsePredicate);
+  const bindings = satisfyAll(predicates, facts, [{}]);
+  const matchingFacts =
+    predicates.length === 1 ? facts.filter((fact) => canUnify(predicates[0], fact, {})) : [];
 
   return {
     bindings: dedupeBindings(bindings),
@@ -201,17 +213,52 @@ function compileStatement(statement: string): string {
   return statement;
 }
 
-function compileQuery(query: string): string {
+function compileQuery(query: string): string[] {
   if (predicatePattern.test(query)) {
-    return query;
+    return [query];
   }
 
   const recommendationMatch = query.match(/^[Ww]hat is recommended for ([A-Z][a-zA-Z0-9_-]*)$/);
   if (recommendationMatch) {
-    return `recommendedAction(${recommendationMatch[1]}, Action)`;
+    return [`recommendedAction(${recommendationMatch[1]}, Action)`];
   }
 
-  return compileStatement(query);
+  const typedStateMatch = query.match(naturalTypedStateQueryPattern);
+  if (typedStateMatch) {
+    const [, typeName, state] = typedStateMatch;
+    return [`${state}(${toVariableName(typeName)})`];
+  }
+
+  const stateMatch = query.match(naturalStateQueryPattern);
+  if (stateMatch) {
+    return [`${stateMatch[1]}(Item)`];
+  }
+
+  const typedThresholdMatch = query.match(naturalTypedThresholdQueryPattern);
+  if (typedThresholdMatch) {
+    const [, typeName, measurement, operator, limit] = typedThresholdMatch;
+    return compileThresholdQuery(toVariableName(typeName), measurement, operator, limit);
+  }
+
+  const thresholdMatch = query.match(naturalThresholdQueryPattern);
+  if (thresholdMatch) {
+    const [, measurement, operator, limit] = thresholdMatch;
+    return compileThresholdQuery("Item", measurement, operator, limit);
+  }
+
+  const typedBinaryMatch = query.match(naturalTypedBinaryQueryPattern);
+  if (typedBinaryMatch) {
+    const [, typeName, property, value] = typedBinaryMatch;
+    return [`${property}(${toVariableName(typeName)}, ${value})`];
+  }
+
+  const binaryMatch = query.match(naturalBinaryQueryPattern);
+  if (binaryMatch) {
+    const [, property, value] = binaryMatch;
+    return [`${property}(Item, ${value})`];
+  }
+
+  return [compileStatement(query)];
 }
 
 function compileNaturalCondition(condition: string): string {
@@ -248,6 +295,16 @@ function comparisonPredicate(operator: string): string {
     default:
       throw new Error(`invalid comparison "${operator}"`);
   }
+}
+
+function compileThresholdQuery(
+  subject: string,
+  measurement: string,
+  operator: string,
+  limit: string,
+): string[] {
+  const value = toVariableName(`${measurement}Value`);
+  return [`${measurement}(${subject}, ${value})`, `${comparisonPredicate(operator)}(${value}, ${limit})`];
 }
 
 function toVariableName(value: string): string {
