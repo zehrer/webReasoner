@@ -40,6 +40,28 @@ trustedDestination(X)
 Variables start with an uppercase letter. Atoms start with a lowercase letter
 or number.
 
+## Examples
+
+The app includes a `Haus Automation` example. It models sensor facts such as
+motion, darkness, temperature, open windows, water leaks, and energy mode.
+Rules then derive recommended actions:
+
+```prolog
+shouldTurnOnLight(Room) :- occupied(home), dark(Room), motion(Room).
+shouldHeat(Room) :- occupied(home), cold(Room), windowClosed(Room).
+shouldNotify(Room) :- waterLeak(Room).
+
+recommendedAction(Room, turnOnLight) :- shouldTurnOnLight(Room).
+recommendedAction(Room, heatRoom) :- shouldHeat(Room).
+recommendedAction(Room, notifyLeak) :- shouldNotify(Room).
+```
+
+Try this query:
+
+```prolog
+recommendedAction(Room, Action)
+```
+
 ## Development
 
 ```bash

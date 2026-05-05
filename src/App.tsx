@@ -5,13 +5,26 @@ import {
   Check,
   Database,
   GitBranch,
+  Home,
   Play,
   Search,
   Sparkles,
 } from "lucide-react";
 import { formatFact, runQuery, runReasoner } from "./reasoner";
 
-const sampleKnowledgeBase = `# Facts
+type Example = {
+  name: string;
+  icon: "web" | "home";
+  query: string;
+  knowledgeBase: string;
+};
+
+const examples: Example[] = [
+  {
+    name: "Web graph",
+    icon: "web",
+    query: "trustedDestination(X)",
+    knowledgeBase: `# Facts
 link(home, docs).
 link(docs, api).
 link(api, examples).
@@ -22,11 +35,43 @@ trust(home).
 # Rules
 reachable(X, Y) :- link(X, Y).
 reachable(X, Z) :- link(X, Y), reachable(Y, Z).
-trustedDestination(Y) :- trust(X), reachable(X, Y).`;
+trustedDestination(Y) :- trust(X), reachable(X, Y).`,
+  },
+  {
+    name: "Haus Automation",
+    icon: "home",
+    query: "recommendedAction(Room, Action)",
+    knowledgeBase: `# Facts
+occupied(home).
+dark(livingroom).
+dark(hallway).
+motion(livingroom).
+motion(hallway).
+cold(bedroom).
+cold(office).
+windowClosed(bedroom).
+windowOpen(office).
+waterLeak(bathroom).
+idle(washer).
+energyMode(economy).
+
+# Rules
+shouldTurnOnLight(Room) :- occupied(home), dark(Room), motion(Room).
+shouldHeat(Room) :- occupied(home), cold(Room), windowClosed(Room).
+shouldNotify(Room) :- waterLeak(Room).
+shouldSaveEnergy(Device) :- idle(Device), energyMode(economy).
+
+recommendedAction(Room, turnOnLight) :- shouldTurnOnLight(Room).
+recommendedAction(Room, heatRoom) :- shouldHeat(Room).
+recommendedAction(Room, notifyLeak) :- shouldNotify(Room).`,
+  },
+];
+
+const defaultExample = examples[0];
 
 function App() {
-  const [knowledgeBase, setKnowledgeBase] = useState(sampleKnowledgeBase);
-  const [query, setQuery] = useState("trustedDestination(X)");
+  const [knowledgeBase, setKnowledgeBase] = useState(defaultExample.knowledgeBase);
+  const [query, setQuery] = useState(defaultExample.query);
   const reasoning = useMemo(() => runReasoner(knowledgeBase), [knowledgeBase]);
   const queryResult = useMemo(() => {
     try {
@@ -75,10 +120,21 @@ function App() {
               <Database size={19} />
               <h2>Knowledge Base</h2>
             </div>
-            <button type="button" onClick={() => setKnowledgeBase(sampleKnowledgeBase)}>
-              <Sparkles size={17} />
-              Sample
-            </button>
+            <div className="example-actions" aria-label="Example knowledge bases">
+              {examples.map((example) => (
+                <button
+                  key={example.name}
+                  type="button"
+                  onClick={() => {
+                    setKnowledgeBase(example.knowledgeBase);
+                    setQuery(example.query);
+                  }}
+                >
+                  {example.icon === "home" ? <Home size={17} /> : <Sparkles size={17} />}
+                  {example.name}
+                </button>
+              ))}
+            </div>
           </div>
           <textarea
             spellCheck={false}
