@@ -5,18 +5,36 @@ import {
   Check,
   Database,
   GitBranch,
+  List,
   Home,
   Play,
+  Share2,
   Search,
   Sparkles,
 } from "lucide-react";
-import { formatFact, runQuery, runReasoner } from "./reasoner";
+import { Fact, formatFact, runQuery, runReasoner } from "./reasoner";
 
 type Example = {
   name: string;
   icon: "web" | "home";
   query: string;
   knowledgeBase: string;
+};
+
+type ResultsView = "list" | "graph";
+
+type GraphNode = {
+  id: string;
+  x: number;
+  y: number;
+};
+
+type GraphEdge = {
+  id: string;
+  from: string;
+  to: string;
+  label: string;
+  derived: boolean;
 };
 
 const examples: Example[] = [
@@ -66,7 +84,9 @@ const defaultExample = examples[0];
 function App() {
   const [knowledgeBase, setKnowledgeBase] = useState(defaultExample.knowledgeBase);
   const [query, setQuery] = useState(defaultExample.query);
+  const [resultsView, setResultsView] = useState<ResultsView>("list");
   const reasoning = useMemo(() => runReasoner(knowledgeBase), [knowledgeBase]);
+  const graphModel = useMemo(() => createGraphModel(reasoning.allFacts), [reasoning.allFacts]);
   const queryResult = useMemo(() => {
     try {
       return runQuery(query, reasoning.allFacts);
@@ -148,10 +168,32 @@ function App() {
               <GitBranch size={19} />
               <h2>Inferred Model</h2>
             </div>
-            <span className={reasoning.errors.length ? "status error" : "status ok"}>
-              {reasoning.errors.length ? <AlertCircle size={16} /> : <Check size={16} />}
-              {reasoning.errors.length ? "Needs attention" : "Consistent"}
-            </span>
+            <div className="results-controls">
+              {!reasoning.errors.length && (
+                <div className="view-tabs" role="tablist" aria-label="Inferred model view">
+                  <button
+                    type="button"
+                    className={resultsView === "list" ? "active" : ""}
+                    onClick={() => setResultsView("list")}
+                  >
+                    <List size={16} />
+                    List
+                  </button>
+                  <button
+                    type="button"
+                    className={resultsView === "graph" ? "active" : ""}
+                    onClick={() => setResultsView("graph")}
+                  >
+                    <Share2 size={16} />
+                    Graph
+                  </button>
+                </div>
+              )}
+              <span className={reasoning.errors.length ? "status error" : "status ok"}>
+                {reasoning.errors.length ? <AlertCircle size={16} /> : <Check size={16} />}
+                {reasoning.errors.length ? "Needs attention" : "Consistent"}
+              </span>
+            </div>
           </div>
 
           {reasoning.errors.length > 0 ? (
@@ -160,7 +202,7 @@ function App() {
                 <p key={error}>{error}</p>
               ))}
             </div>
-          ) : (
+          ) : resultsView === "list" ? (
             <div className="fact-list">
               {reasoning.allFacts.map((fact) => (
                 <article key={formatFact(fact)} className={fact.derivedBy ? "derived" : ""}>
@@ -169,6 +211,8 @@ function App() {
                 </article>
               ))}
             </div>
+          ) : (
+            <GraphView nodes={graphModel.nodes} edges={graphModel.edges} />
           )}
         </div>
       </section>
@@ -262,6 +306,102 @@ function App() {
       </section>
     </main>
   );
+}
+
+function GraphView({ nodes, edges }: { nodes: GraphNode[]; edges: GraphEdge[] }) {
+  if (!nodes.length) {
+    return <p className="empty-graph">No graphable relationships yet.</p>;
+  }
+
+  const nodeLookup = new Map(nodes.map((node) => [node.id, node]));
+
+  return (
+    <div className="graph-view">
+      <svg viewBox="0 0 720 480" role="img" aria-label="Relationship graph">
+        <defs>
+          <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 Z" />
+          </marker>
+        </defs>
+
+        {edges.map((edge) => {
+          const from = nodeLookup.get(edge.from);
+          const to = nodeLookup.get(edge.to);
+          if (!from || !to) {
+            return null;
+          }
+
+          const labelX = (from.x + to.x) / 2;
+          const labelY = (from.y + to.y) / 2;
+
+          return (
+            <g key={edge.id} className={edge.derived ? "graph-edge derived" : "graph-edge"}>
+              <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} markerEnd="url(#arrowhead)" />
+              <text x={labelX} y={labelY}>
+                {edge.label}
+              </text>
+            </g>
+          );
+        })}
+
+        {nodes.map((node) => (
+          <g key={node.id} className="graph-node" transform={`translate(${node.x}, ${node.y})`}>
+            <circle r="32" />
+            <text>{node.id}</text>
+          </g>
+        ))}
+      </svg>
+      <div className="graph-legend">
+        <span>solid: given</span>
+        <span>dashed: inferred</span>
+      </div>
+    </div>
+  );
+}
+
+function createGraphModel(facts: Fact[]): { nodes: GraphNode[]; edges: GraphEdge[] } {
+  const nodeIds = new Set<string>();
+  const edges: GraphEdge[] = [];
+
+  for (const fact of facts) {
+    if (fact.args.length === 1) {
+      nodeIds.add(fact.args[0]);
+      nodeIds.add(fact.predicate);
+      edges.push({
+        id: formatFact(fact),
+        from: fact.args[0],
+        to: fact.predicate,
+        label: "is",
+        derived: Boolean(fact.derivedBy),
+      });
+    } else if (fact.args.length === 2) {
+      nodeIds.add(fact.args[0]);
+      nodeIds.add(fact.args[1]);
+      edges.push({
+        id: formatFact(fact),
+        from: fact.args[0],
+        to: fact.args[1],
+        label: fact.predicate,
+        derived: Boolean(fact.derivedBy),
+      });
+    }
+  }
+
+  const ids = Array.from(nodeIds).sort();
+  const centerX = 360;
+  const centerY = 240;
+  const radiusX = 270;
+  const radiusY = 165;
+  const nodes = ids.map<GraphNode>((id, index) => {
+    const angle = (index / Math.max(ids.length, 1)) * Math.PI * 2 - Math.PI / 2;
+    return {
+      id,
+      x: centerX + Math.cos(angle) * radiusX,
+      y: centerY + Math.sin(angle) * radiusY,
+    };
+  });
+
+  return { nodes, edges };
 }
 
 export default App;

@@ -205,6 +205,43 @@ textarea {
   background: #ffe3dc;
 }
 
+.results-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.view-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #d5ded8;
+  border-radius: 8px;
+  background: #f5f7f3;
+}
+
+.view-tabs button {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 6px;
+  color: #56645d;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.view-tabs button.active {
+  color: #123326;
+  background: #dff2e7;
+}
+
 .fact-list,
 .error-list {
   display: grid;
@@ -249,6 +286,80 @@ code {
   border-left: 4px solid #b4472e;
   color: #762817;
   background: #fff1ed;
+}
+
+.graph-view {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.graph-view svg {
+  width: 100%;
+  min-height: 480px;
+  border: 1px solid #ebe5da;
+  border-radius: 8px;
+  background:
+    linear-gradient(rgba(29, 37, 33, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(29, 37, 33, 0.05) 1px, transparent 1px),
+    #fbfaf5;
+  background-size: 28px 28px;
+}
+
+.graph-edge line {
+  stroke: #7f9187;
+  stroke-width: 2;
+}
+
+.graph-edge.derived line {
+  stroke: #2f8060;
+  stroke-dasharray: 8 6;
+}
+
+.graph-edge path {
+  fill: #7f9187;
+}
+
+.graph-edge.derived path {
+  fill: #2f8060;
+}
+
+.graph-edge text {
+  paint-order: stroke;
+  stroke: #fbfaf5;
+  stroke-width: 5px;
+  fill: #315444;
+  font-size: 13px;
+  font-weight: 800;
+  text-anchor: middle;
+}
+
+.graph-node circle {
+  fill: #fffdf8;
+  stroke: #315444;
+  stroke-width: 2;
+}
+
+.graph-node text {
+  fill: #17201c;
+  font-size: 12px;
+  font-weight: 800;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.graph-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: #65736d;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.empty-graph {
+  padding: 18px;
+  color: #65736d;
 }
 
 .query-band {
@@ -404,6 +515,10 @@ th {
   .fact-list article {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .results-controls {
+    justify-content: flex-start;
   }
 
   .example-actions {
