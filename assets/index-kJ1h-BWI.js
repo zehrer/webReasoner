@@ -17,7 +17,7 @@ trust(home).
 # Rules
 reachable(X, Y) :- link(X, Y).
 reachable(X, Z) :- link(X, Y), reachable(Y, Z).
-trustedDestination(Y) :- trust(X), reachable(X, Y).`},{name:"Haus Automation",icon:"home",query:"recommendedAction(Room, Action)",knowledgeBase:`# Facts
+trustedDestination(Y) :- trust(X), reachable(X, Y).`},{name:"House Automation",icon:"home",query:"recommendedAction(Room, Action)",knowledgeBase:`# Facts
 occupied(home).
 dark(livingroom).
 dark(hallway).
