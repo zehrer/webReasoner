@@ -46,14 +46,15 @@ livingroom is occupied.
 hallway is occupied.
 livingroom is dark.
 hallway is dark.
-bedroom is cold.
-office is cold.
+bedroom has temperature 16.
+office has temperature 17.
 bedroom has window closed.
 office has window open.
 bathroom is leaking.
 washer is idle.
 
 # Natural rules
+Room is cold when Room has temperature below 18.
 recommend turnOnLight for Room when Room is occupied and Room is dark.
 recommend heatRoom for Room when Room is cold and Room has window closed.
 recommend notifyLeak for Room when Room is leaking.`,

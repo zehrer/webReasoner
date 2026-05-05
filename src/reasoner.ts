@@ -37,13 +37,18 @@ export type ReasoningResult = {
 };
 
 const predicatePattern = /^([a-z][a-zA-Z0-9_-]*)\((.*)\)$/;
+const numericTermPattern = /^-?\d+(?:\.\d+)?$/;
 const naturalUnaryFactPattern = /^([a-z0-9][a-zA-Z0-9_-]*) is ([a-z][a-zA-Z0-9_-]*)$/;
 const naturalBinaryFactPattern =
-  /^([a-z0-9][a-zA-Z0-9_-]*) has ([a-z][a-zA-Z0-9_-]*) ([a-z0-9][a-zA-Z0-9_-]*)$/;
+  /^([a-z0-9][a-zA-Z0-9_-]*) has ([a-z][a-zA-Z0-9_-]*) (-?\d+(?:\.\d+)?|[a-z0-9][a-zA-Z0-9_-]*)$/;
 const naturalRulePattern = /^recommend ([a-z][a-zA-Z0-9_-]*) for ([A-Z][a-zA-Z0-9_-]*) when (.+)$/;
 const naturalUnaryConditionPattern = /^([A-Z][a-zA-Z0-9_-]*) is ([a-z][a-zA-Z0-9_-]*)$/;
 const naturalBinaryConditionPattern =
   /^([A-Z][a-zA-Z0-9_-]*) has ([a-z][a-zA-Z0-9_-]*) ([a-z0-9][a-zA-Z0-9_-]*)$/;
+const naturalThresholdConditionPattern =
+  /^([A-Z][a-zA-Z0-9_-]*) has ([a-z][a-zA-Z0-9_-]*) (below|above|at least|at most) (-?\d+(?:\.\d+)?)$/;
+const naturalClassificationRulePattern =
+  /^([A-Z][a-zA-Z0-9_-]*) is ([a-z][a-zA-Z0-9_-]*) when (.+)$/;
 
 export function runReasoner(input: string): ReasoningResult {
   const facts = new Map<string, Fact>();
@@ -186,6 +191,13 @@ function compileStatement(statement: string): string {
     return `recommendedAction(${subject}, ${action}) :- ${conditions.join(", ")}`;
   }
 
+  const classificationRuleMatch = statement.match(naturalClassificationRulePattern);
+  if (classificationRuleMatch) {
+    const [, subject, state, conditionText] = classificationRuleMatch;
+    const conditions = conditionText.split(" and ").map(compileNaturalCondition);
+    return `${state}(${subject}) :- ${conditions.join(", ")}`;
+  }
+
   return statement;
 }
 
@@ -203,6 +215,13 @@ function compileQuery(query: string): string {
 }
 
 function compileNaturalCondition(condition: string): string {
+  const thresholdMatch = condition.match(naturalThresholdConditionPattern);
+  if (thresholdMatch) {
+    const [, subject, measurement, operator, limit] = thresholdMatch;
+    const value = toVariableName(`${measurement}Value`);
+    return `${measurement}(${subject}, ${value}), ${comparisonPredicate(operator)}(${value}, ${limit})`;
+  }
+
   const unaryMatch = condition.match(naturalUnaryConditionPattern);
   if (unaryMatch) {
     return `${unaryMatch[2]}(${unaryMatch[1]})`;
@@ -214,6 +233,25 @@ function compileNaturalCondition(condition: string): string {
   }
 
   throw new Error(`invalid natural condition "${condition}"`);
+}
+
+function comparisonPredicate(operator: string): string {
+  switch (operator) {
+    case "below":
+      return "below";
+    case "above":
+      return "above";
+    case "at least":
+      return "atLeast";
+    case "at most":
+      return "atMost";
+    default:
+      throw new Error(`invalid comparison "${operator}"`);
+  }
+}
+
+function toVariableName(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function parsePredicate(text: string): Predicate {
@@ -264,7 +302,7 @@ function parseTerm(term: string): Term {
     return { kind: "var", value: term };
   }
 
-  if (/^[a-z0-9][a-zA-Z0-9_-]*$/.test(term)) {
+  if (numericTermPattern.test(term) || /^[a-z0-9][a-zA-Z0-9_-]*$/.test(term)) {
     return { kind: "atom", value: term };
   }
 
@@ -278,10 +316,50 @@ function satisfyAll(predicates: Predicate[], facts: Fact[], bindings: Binding[])
 }
 
 function satisfy(predicate: Predicate, facts: Fact[], binding: Binding): Binding[] {
+  const builtInResult = satisfyBuiltIn(predicate, binding);
+  if (builtInResult) {
+    return builtInResult;
+  }
+
   return facts.reduce<Binding[]>((matches, fact) => {
     const next = canUnify(predicate, fact, binding);
     return next ? [...matches, next] : matches;
   }, []);
+}
+
+function satisfyBuiltIn(predicate: Predicate, binding: Binding): Binding[] | null {
+  const comparisons: Record<string, (left: number, right: number) => boolean> = {
+    below: (left, right) => left < right,
+    above: (left, right) => left > right,
+    atLeast: (left, right) => left >= right,
+    atMost: (left, right) => left <= right,
+  };
+  const compare = comparisons[predicate.name];
+  if (!compare) {
+    return null;
+  }
+
+  if (predicate.terms.length !== 2) {
+    return [];
+  }
+
+  const left = resolveNumericTerm(predicate.terms[0], binding);
+  const right = resolveNumericTerm(predicate.terms[1], binding);
+  if (left === null || right === null) {
+    return [];
+  }
+
+  return compare(left, right) ? [binding] : [];
+}
+
+function resolveNumericTerm(term: Term, binding: Binding): number | null {
+  const value = term.kind === "var" ? binding[term.value] : term.value;
+  if (value === undefined || value.trim() === "") {
+    return null;
+  }
+
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : null;
 }
 
 function canUnify(predicate: Predicate, fact: Fact, binding: Binding): Binding | null {

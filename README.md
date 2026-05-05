@@ -48,7 +48,7 @@ These lines are compiled into the same predicates before reasoning runs.
 Facts:
 
 ```text
-bedroom is cold.
+bedroom has temperature 16.
 bedroom has window closed.
 bathroom is leaking.
 ```
@@ -56,6 +56,7 @@ bathroom is leaking.
 Rules:
 
 ```text
+Room is cold when Room has temperature below 18.
 recommend heatRoom for Room when Room is cold and Room has window closed.
 recommend notifyLeak for Room when Room is leaking.
 ```
@@ -69,6 +70,15 @@ what is recommended for Room
 This style is intentionally constrained. It is meant to be readable and
 predictable, not a general English parser.
 
+Supported numeric comparisons in conditions are:
+
+```text
+Room has temperature below 18
+Room has temperature above 24
+Room has humidity at least 70
+Room has battery at most 20
+```
+
 ## Examples
 
 The app includes a `House Automation` example using the natural style. It models
@@ -79,9 +89,10 @@ Rules then derive recommended actions:
 ```text
 livingroom is occupied.
 livingroom is dark.
-bedroom is cold.
+bedroom has temperature 16.
 bedroom has window closed.
 
+Room is cold when Room has temperature below 18.
 recommend turnOnLight for Room when Room is occupied and Room is dark.
 recommend heatRoom for Room when Room is cold and Room has window closed.
 ```
