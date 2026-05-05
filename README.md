@@ -40,26 +40,56 @@ trustedDestination(X)
 Variables start with an uppercase letter. Atoms start with a lowercase letter
 or number.
 
+## Natural Style
+
+For less technical users, the editor also accepts a controlled natural style.
+These lines are compiled into the same predicates before reasoning runs.
+
+Facts:
+
+```text
+bedroom is cold.
+bedroom has window closed.
+bathroom is leaking.
+```
+
+Rules:
+
+```text
+recommend heatRoom for Room when Room is cold and Room has window closed.
+recommend notifyLeak for Room when Room is leaking.
+```
+
+Queries:
+
+```text
+what is recommended for Room
+```
+
+This style is intentionally constrained. It is meant to be readable and
+predictable, not a general English parser.
+
 ## Examples
 
-The app includes a `House Automation` example. It models sensor facts such as
+The app includes a `House Automation` example using the natural style. It models
+sensor facts such as
 motion, darkness, temperature, open windows, water leaks, and energy mode.
 Rules then derive recommended actions:
 
-```prolog
-shouldTurnOnLight(Room) :- occupied(home), dark(Room), motion(Room).
-shouldHeat(Room) :- occupied(home), cold(Room), windowClosed(Room).
-shouldNotify(Room) :- waterLeak(Room).
+```text
+livingroom is occupied.
+livingroom is dark.
+bedroom is cold.
+bedroom has window closed.
 
-recommendedAction(Room, turnOnLight) :- shouldTurnOnLight(Room).
-recommendedAction(Room, heatRoom) :- shouldHeat(Room).
-recommendedAction(Room, notifyLeak) :- shouldNotify(Room).
+recommend turnOnLight for Room when Room is occupied and Room is dark.
+recommend heatRoom for Room when Room is cold and Room has window closed.
 ```
 
 Try this query:
 
-```prolog
-recommendedAction(Room, Action)
+```text
+what is recommended for Room
 ```
 
 ## Development

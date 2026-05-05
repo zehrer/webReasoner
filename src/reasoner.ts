@@ -37,6 +37,13 @@ export type ReasoningResult = {
 };
 
 const predicatePattern = /^([a-z][a-zA-Z0-9_-]*)\((.*)\)$/;
+const naturalUnaryFactPattern = /^([a-z0-9][a-zA-Z0-9_-]*) is ([a-z][a-zA-Z0-9_-]*)$/;
+const naturalBinaryFactPattern =
+  /^([a-z0-9][a-zA-Z0-9_-]*) has ([a-z][a-zA-Z0-9_-]*) ([a-z0-9][a-zA-Z0-9_-]*)$/;
+const naturalRulePattern = /^recommend ([a-z][a-zA-Z0-9_-]*) for ([A-Z][a-zA-Z0-9_-]*) when (.+)$/;
+const naturalUnaryConditionPattern = /^([A-Z][a-zA-Z0-9_-]*) is ([a-z][a-zA-Z0-9_-]*)$/;
+const naturalBinaryConditionPattern =
+  /^([A-Z][a-zA-Z0-9_-]*) has ([a-z][a-zA-Z0-9_-]*) ([a-z0-9][a-zA-Z0-9_-]*)$/;
 
 export function runReasoner(input: string): ReasoningResult {
   const facts = new Map<string, Fact>();
@@ -51,10 +58,11 @@ export function runReasoner(input: string): ReasoningResult {
 
     const statement = text.slice(0, -1).trim();
     try {
-      if (statement.includes(":-")) {
-        rules.push(parseRule(statement, text));
+      const compiledStatement = compileStatement(statement);
+      if (compiledStatement.includes(":-")) {
+        rules.push(parseRule(compiledStatement, text));
       } else {
-        const predicate = parsePredicate(statement);
+        const predicate = parsePredicate(compiledStatement);
         if (predicate.terms.some((term) => term.kind === "var")) {
           errors.push(`Line ${lineNumber}: facts cannot contain variables`);
           continue;
@@ -114,12 +122,12 @@ export function runReasoner(input: string): ReasoningResult {
 }
 
 export function runQuery(query: string, facts: Fact[]): QueryResult {
-  const normalized = query.trim().replace(/\.$/, "");
+  const normalized = query.trim().replace(/[.?]$/, "");
   if (!normalized) {
     return { bindings: [], facts: [] };
   }
 
-  const predicate = parsePredicate(normalized);
+  const predicate = parsePredicate(compileQuery(normalized));
   const bindings = satisfy(predicate, facts, {});
   const matchingFacts = facts.filter((fact) => canUnify(predicate, fact, {}));
 
@@ -154,6 +162,58 @@ function parseRule(statement: string, source: string): Rule {
     body: splitPredicates(bodyText).map(parsePredicate),
     source,
   };
+}
+
+function compileStatement(statement: string): string {
+  if (statement.includes(":-") || predicatePattern.test(statement)) {
+    return statement;
+  }
+
+  const unaryFactMatch = statement.match(naturalUnaryFactPattern);
+  if (unaryFactMatch) {
+    return `${unaryFactMatch[2]}(${unaryFactMatch[1]})`;
+  }
+
+  const binaryFactMatch = statement.match(naturalBinaryFactPattern);
+  if (binaryFactMatch) {
+    return `${binaryFactMatch[2]}(${binaryFactMatch[1]}, ${binaryFactMatch[3]})`;
+  }
+
+  const ruleMatch = statement.match(naturalRulePattern);
+  if (ruleMatch) {
+    const [, action, subject, conditionText] = ruleMatch;
+    const conditions = conditionText.split(" and ").map(compileNaturalCondition);
+    return `recommendedAction(${subject}, ${action}) :- ${conditions.join(", ")}`;
+  }
+
+  return statement;
+}
+
+function compileQuery(query: string): string {
+  if (predicatePattern.test(query)) {
+    return query;
+  }
+
+  const recommendationMatch = query.match(/^[Ww]hat is recommended for ([A-Z][a-zA-Z0-9_-]*)$/);
+  if (recommendationMatch) {
+    return `recommendedAction(${recommendationMatch[1]}, Action)`;
+  }
+
+  return compileStatement(query);
+}
+
+function compileNaturalCondition(condition: string): string {
+  const unaryMatch = condition.match(naturalUnaryConditionPattern);
+  if (unaryMatch) {
+    return `${unaryMatch[2]}(${unaryMatch[1]})`;
+  }
+
+  const binaryMatch = condition.match(naturalBinaryConditionPattern);
+  if (binaryMatch) {
+    return `${binaryMatch[2]}(${binaryMatch[1]}, ${binaryMatch[3]})`;
+  }
+
+  throw new Error(`invalid natural condition "${condition}"`);
 }
 
 function parsePredicate(text: string): Predicate {

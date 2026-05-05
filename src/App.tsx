@@ -40,30 +40,23 @@ trustedDestination(Y) :- trust(X), reachable(X, Y).`,
   {
     name: "House Automation",
     icon: "home",
-    query: "recommendedAction(Room, Action)",
-    knowledgeBase: `# Facts
-occupied(home).
-dark(livingroom).
-dark(hallway).
-motion(livingroom).
-motion(hallway).
-cold(bedroom).
-cold(office).
-windowClosed(bedroom).
-windowOpen(office).
-waterLeak(bathroom).
-idle(washer).
-energyMode(economy).
+    query: "what is recommended for Room",
+    knowledgeBase: `# Natural facts
+livingroom is occupied.
+hallway is occupied.
+livingroom is dark.
+hallway is dark.
+bedroom is cold.
+office is cold.
+bedroom has window closed.
+office has window open.
+bathroom is leaking.
+washer is idle.
 
-# Rules
-shouldTurnOnLight(Room) :- occupied(home), dark(Room), motion(Room).
-shouldHeat(Room) :- occupied(home), cold(Room), windowClosed(Room).
-shouldNotify(Room) :- waterLeak(Room).
-shouldSaveEnergy(Device) :- idle(Device), energyMode(economy).
-
-recommendedAction(Room, turnOnLight) :- shouldTurnOnLight(Room).
-recommendedAction(Room, heatRoom) :- shouldHeat(Room).
-recommendedAction(Room, notifyLeak) :- shouldNotify(Room).`,
+# Natural rules
+recommend turnOnLight for Room when Room is occupied and Room is dark.
+recommend heatRoom for Room when Room is cold and Room has window closed.
+recommend notifyLeak for Room when Room is leaking.`,
   },
 ];
 
