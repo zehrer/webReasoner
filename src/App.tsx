@@ -22,13 +22,11 @@ import {
   Play,
   Share2,
   Search,
-  Sparkles,
 } from "lucide-react";
 import { Fact, formatFact, runQuery, runReasoner } from "./reasoner";
 
 type Example = {
   name: string;
-  icon: "web" | "home";
   query: string;
   knowledgeBase: string;
 };
@@ -65,29 +63,10 @@ type RenderEdge = {
   derived: boolean;
 };
 
-const examples: Example[] = [
-  {
-    name: "Web graph",
-    icon: "web",
-    query: "trustedDestination(X)",
-    knowledgeBase: `# Facts
-link(home, docs).
-link(docs, api).
-link(api, examples).
-link(home, blog).
-link(blog, examples).
-trust(home).
-
-# Rules
-reachable(X, Y) :- link(X, Y).
-reachable(X, Z) :- link(X, Y), reachable(Y, Z).
-trustedDestination(Y) :- trust(X), reachable(X, Y).`,
-  },
-  {
-    name: "House Automation",
-    icon: "home",
-    query: "what is recommended for Room",
-    knowledgeBase: `# Natural facts
+const houseAutomationExample: Example = {
+  name: "House Automation",
+  query: "what is recommended for Room",
+  knowledgeBase: `# Natural facts
 livingroom is occupied.
 hallway is occupied.
 livingroom is dark.
@@ -104,14 +83,11 @@ Room is cold when Room has temperature below 18.
 recommend turnOnLight for Room when Room is occupied and Room is dark.
 recommend heatRoom for Room when Room is cold and Room has window closed.
 recommend notifyLeak for Room when Room is leaking.`,
-  },
-];
-
-const defaultExample = examples[0];
+};
 
 function App() {
-  const [knowledgeBase, setKnowledgeBase] = useState(defaultExample.knowledgeBase);
-  const [query, setQuery] = useState(defaultExample.query);
+  const [knowledgeBase, setKnowledgeBase] = useState(houseAutomationExample.knowledgeBase);
+  const [query, setQuery] = useState(houseAutomationExample.query);
   const [resultsView, setResultsView] = useState<ResultsView>("list");
   const reasoning = useMemo(() => runReasoner(knowledgeBase), [knowledgeBase]);
   const graphModel = useMemo(() => createGraphModel(reasoning.allFacts), [reasoning.allFacts]);
@@ -166,21 +142,17 @@ function App() {
               <Database size={19} />
               <h2>Knowledge Base</h2>
             </div>
-            <div className="example-actions" aria-label="Example knowledge bases">
-              {examples.map((example) => (
-                <button
-                  key={example.name}
-                  type="button"
-                  onClick={() => {
-                    setKnowledgeBase(example.knowledgeBase);
-                    setQuery(example.query);
-                  }}
-                >
-                  {example.icon === "home" ? <Home size={17} /> : <Sparkles size={17} />}
-                  {example.name}
-                </button>
-              ))}
-            </div>
+            <button
+              className="example-button"
+              type="button"
+              onClick={() => {
+                setKnowledgeBase(houseAutomationExample.knowledgeBase);
+                setQuery(houseAutomationExample.query);
+              }}
+            >
+              <Home size={17} />
+              Reset example
+            </button>
           </div>
           <textarea
             spellCheck={false}
