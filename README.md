@@ -132,3 +132,8 @@ npm run build
 
 GitHub Pages deployment is documented in
 [docs/deployment.md](docs/deployment.md).
+
+## Requirements
+
+Product and language requirements are documented in
+[docs/requirements.md](docs/requirements.md).
