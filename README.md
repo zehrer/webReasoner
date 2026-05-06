@@ -48,6 +48,8 @@ These lines are compiled into the same predicates before reasoning runs.
 Facts:
 
 ```text
+current time is 22:15.
+frontdoor is a door.
 bedroom has temperature 16.
 bedroom has window closed.
 bathroom is leaking.
@@ -59,12 +61,13 @@ Rules:
 Room is cold when Room has temperature below 18.
 recommend heatRoom for Room when Room is cold and Room has window closed.
 recommend notifyLeak for Room when Room is leaking.
+recommend lock for Door when Door is a door and Door is unlocked and current time is at least 22:00.
 ```
 
 Queries:
 
 ```text
-what is recommended for Room
+what is recommended for Item
 what is cold?
 which rooms are cold?
 what has temperature below 18?
@@ -91,6 +94,18 @@ Room has humidity at least 70
 Room has battery at most 20
 ```
 
+Supported time facts and comparisons use 24-hour `HH:MM` values:
+
+```text
+current time is 22:15.
+current time is before 08:00
+current time is after 18:30
+current time is at least 22:00
+current time is at most 23:00
+current time is at 08:00
+current time is exactly 08:00
+```
+
 ## Examples
 
 The app includes a `House Automation` example using the natural style. It models
@@ -99,20 +114,24 @@ motion, darkness, temperature, open windows, water leaks, and energy mode.
 Rules then derive recommended actions:
 
 ```text
+current time is 22:15.
 livingroom is occupied.
 livingroom is dark.
 bedroom has temperature 16.
 bedroom has window closed.
+frontdoor is a door.
+frontdoor is unlocked.
 
 Room is cold when Room has temperature below 18.
 recommend turnOnLight for Room when Room is occupied and Room is dark.
 recommend heatRoom for Room when Room is cold and Room has window closed.
+recommend lock for Door when Door is a door and Door is unlocked and current time is at least 22:00.
 ```
 
 Try this query:
 
 ```text
-what is recommended for Room
+what is recommended for Item
 ```
 
 ## Development

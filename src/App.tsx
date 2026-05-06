@@ -65,8 +65,9 @@ type RenderEdge = {
 
 const houseAutomationExample: Example = {
   name: "House Automation",
-  query: "what is recommended for Room",
+  query: "what is recommended for Item",
   knowledgeBase: `# Natural facts
+current time is 22:15.
 livingroom is occupied.
 hallway is occupied.
 livingroom is dark.
@@ -77,12 +78,20 @@ bedroom has window closed.
 office has window open.
 bathroom is leaking.
 washer is idle.
+frontdoor is a door.
+frontdoor is unlocked.
+livingroomLight is a light.
+hallwayLight is a light.
+livingroomLight is on.
+hallwayLight is on.
 
 # Natural rules
 Room is cold when Room has temperature below 18.
 recommend turnOnLight for Room when Room is occupied and Room is dark.
 recommend heatRoom for Room when Room is cold and Room has window closed.
-recommend notifyLeak for Room when Room is leaking.`,
+recommend notifyLeak for Room when Room is leaking.
+recommend lock for Door when Door is a door and Door is unlocked and current time is at least 22:00.
+recommend turnOff for Light when Light is a light and Light is on and current time is at least 08:00.`,
 };
 
 function App() {
@@ -227,7 +236,7 @@ function App() {
                 id="query"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="what is recommended for Room"
+                placeholder="what is recommended for Item"
               />
               <Play size={18} />
             </div>
@@ -238,6 +247,8 @@ function App() {
             <div className="help-grid">
               <section>
                 <h3>Facts</h3>
+                <code>current time is 22:15.</code>
+                <code>frontdoor is a door.</code>
                 <code>bedroom is cold.</code>
                 <code>bedroom has temperature 16.</code>
                 <code>bedroom has window closed.</code>
@@ -246,10 +257,11 @@ function App() {
                 <h3>Rules</h3>
                 <code>Room is cold when Room has temperature below 18.</code>
                 <code>recommend heatRoom for Room when Room is cold.</code>
+                <code>recommend lock for Door when Door is a door and current time is at least 22:00.</code>
               </section>
               <section>
                 <h3>Questions</h3>
-                <code>what is recommended for Room?</code>
+                <code>what is recommended for Item?</code>
                 <code>what is cold?</code>
                 <code>which rooms are cold?</code>
                 <code>what has temperature below 18?</code>
@@ -269,6 +281,10 @@ function App() {
                   <span>above</span>
                   <span>at least</span>
                   <span>at most</span>
+                  <span>before</span>
+                  <span>after</span>
+                  <span>at</span>
+                  <span>exactly</span>
                 </div>
               </section>
             </div>

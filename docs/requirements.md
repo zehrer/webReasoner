@@ -40,10 +40,13 @@ The internal model is predicate-based.
 Examples:
 
 ```prolog
+currentTime(1335).
 temperature(bedroom, 16).
 window(bedroom, closed).
+door(frontdoor).
 cold(Room) :- temperature(Room, TemperatureValue), below(TemperatureValue, 18).
 recommendedAction(Room, heatRoom) :- cold(Room), window(Room, closed).
+recommendedAction(Door, lock) :- door(Door), unlocked(Door), currentTime(CurrentTime), atLeast(CurrentTime, 1320).
 ```
 
 Variables start with an uppercase letter. Atoms start with a lowercase letter
@@ -57,6 +60,8 @@ a general English parser.
 Supported fact forms:
 
 ```text
+current time is 22:15.
+frontdoor is a door.
 livingroom is occupied.
 bedroom has temperature 16.
 bedroom has window closed.
@@ -70,6 +75,8 @@ Room is cold when Room has temperature below 18.
 recommend turnOnLight for Room when Room is occupied and Room is dark.
 recommend heatRoom for Room when Room is cold and Room has window closed.
 recommend notifyLeak for Room when Room is leaking.
+recommend lock for Door when Door is a door and Door is unlocked and current time is at least 22:00.
+recommend turnOff for Light when Light is a light and Light is on and current time is at least 08:00.
 ```
 
 Supported comparison keywords:
@@ -79,12 +86,28 @@ below
 above
 at least
 at most
+before
+after
+at
+exactly
+```
+
+Supported time forms:
+
+```text
+current time is 22:15.
+current time is before 08:00
+current time is after 18:30
+current time is at least 22:00
+current time is at most 23:00
+current time is at 08:00
+current time is exactly 08:00
 ```
 
 Supported query forms:
 
 ```text
-what is recommended for Room?
+what is recommended for Item?
 what is cold?
 which rooms are cold?
 what has temperature below 18?
@@ -111,13 +134,16 @@ The default knowledge base must demonstrate:
 - temperature sensor values
 - window state facts
 - leak detection
+- current time facts
+- door and light type facts
 - inferred `cold(Room)` state from temperature thresholds
-- recommended actions for lights, heating, and leak notifications
+- recommended actions for lights, heating, leak notifications, door locking,
+  and time-based light switching
 
 The current default query is:
 
 ```text
-what is recommended for Room
+what is recommended for Item
 ```
 
 ## Inferred Model Views
@@ -141,12 +167,14 @@ The graph view must:
   has an explicit `room` type.
 - Natural language plural handling is intentionally simple.
 - Queries can express basic state, binary property, recommendation, and numeric
-  threshold forms, but not arbitrary English.
+- threshold forms, but not arbitrary English.
+- Time comparisons do not yet model recurring schedules or midnight-spanning
+  windows. They reason over the current time fact only.
 - The graph layout is force-directed but not a full graph exploration system.
 
 ## Near-Term Requirements
 
-- Add explicit type facts such as `bedroom is a room.` and `washer is a device.`
 - Allow typed queries to filter by type once type facts exist.
+- Add recurring schedule concepts for actual automation triggers.
 - Keep the natural language examples aligned with real home automation concepts.
 - Keep query help in the UI synchronized with this document.

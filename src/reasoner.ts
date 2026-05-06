@@ -38,15 +38,23 @@ export type ReasoningResult = {
 
 const predicatePattern = /^([a-z][a-zA-Z0-9_-]*)\((.*)\)$/;
 const numericTermPattern = /^-?\d+(?:\.\d+)?$/;
+const timePattern = /^([01]\d|2[0-3]):([0-5]\d)$/;
+const naturalTimeFactPattern = /^current time is ((?:[01]\d|2[0-3]):[0-5]\d)$/;
+const naturalTypedFactPattern =
+  /^([a-z0-9][a-zA-Z0-9_-]*) is an? ([a-z][a-zA-Z0-9_-]*)$/;
 const naturalUnaryFactPattern = /^([a-z0-9][a-zA-Z0-9_-]*) is ([a-z][a-zA-Z0-9_-]*)$/;
 const naturalBinaryFactPattern =
   /^([a-z0-9][a-zA-Z0-9_-]*) has ([a-z][a-zA-Z0-9_-]*) (-?\d+(?:\.\d+)?|[a-z0-9][a-zA-Z0-9_-]*)$/;
 const naturalRulePattern = /^recommend ([a-z][a-zA-Z0-9_-]*) for ([A-Z][a-zA-Z0-9_-]*) when (.+)$/;
 const naturalUnaryConditionPattern = /^([A-Z][a-zA-Z0-9_-]*) is ([a-z][a-zA-Z0-9_-]*)$/;
+const naturalTypedConditionPattern =
+  /^([A-Z][a-zA-Z0-9_-]*) is an? ([a-z][a-zA-Z0-9_-]*)$/;
 const naturalBinaryConditionPattern =
   /^([A-Z][a-zA-Z0-9_-]*) has ([a-z][a-zA-Z0-9_-]*) ([a-z0-9][a-zA-Z0-9_-]*)$/;
 const naturalThresholdConditionPattern =
   /^([A-Z][a-zA-Z0-9_-]*) has ([a-z][a-zA-Z0-9_-]*) (below|above|at least|at most) (-?\d+(?:\.\d+)?)$/;
+const naturalTimeConditionPattern =
+  /^current time is (before|after|at least|at most|at|exactly) ((?:[01]\d|2[0-3]):[0-5]\d)$/;
 const naturalClassificationRulePattern =
   /^([A-Z][a-zA-Z0-9_-]*) is ([a-z][a-zA-Z0-9_-]*) when (.+)$/;
 const naturalStateQueryPattern = /^(?:[Ww]hat|[Ww]ho) is ([a-z][a-zA-Z0-9_-]*)$/;
@@ -186,6 +194,16 @@ function compileStatement(statement: string): string {
     return statement;
   }
 
+  const timeFactMatch = statement.match(naturalTimeFactPattern);
+  if (timeFactMatch) {
+    return `currentTime(${parseTimeToMinutes(timeFactMatch[1])})`;
+  }
+
+  const typedFactMatch = statement.match(naturalTypedFactPattern);
+  if (typedFactMatch) {
+    return `${typedFactMatch[2]}(${typedFactMatch[1]})`;
+  }
+
   const unaryFactMatch = statement.match(naturalUnaryFactPattern);
   if (unaryFactMatch) {
     return `${unaryFactMatch[2]}(${unaryFactMatch[1]})`;
@@ -262,6 +280,12 @@ function compileQuery(query: string): string[] {
 }
 
 function compileNaturalCondition(condition: string): string {
+  const timeMatch = condition.match(naturalTimeConditionPattern);
+  if (timeMatch) {
+    const [, operator, time] = timeMatch;
+    return `currentTime(CurrentTime), ${timeComparisonPredicate(operator)}(CurrentTime, ${parseTimeToMinutes(time)})`;
+  }
+
   const thresholdMatch = condition.match(naturalThresholdConditionPattern);
   if (thresholdMatch) {
     const [, subject, measurement, operator, limit] = thresholdMatch;
@@ -274,12 +298,35 @@ function compileNaturalCondition(condition: string): string {
     return `${unaryMatch[2]}(${unaryMatch[1]})`;
   }
 
+  const typedMatch = condition.match(naturalTypedConditionPattern);
+  if (typedMatch) {
+    return `${typedMatch[2]}(${typedMatch[1]})`;
+  }
+
   const binaryMatch = condition.match(naturalBinaryConditionPattern);
   if (binaryMatch) {
     return `${binaryMatch[2]}(${binaryMatch[1]}, ${binaryMatch[3]})`;
   }
 
   throw new Error(`invalid natural condition "${condition}"`);
+}
+
+function timeComparisonPredicate(operator: string): string {
+  switch (operator) {
+    case "before":
+      return "below";
+    case "after":
+      return "above";
+    case "at least":
+      return "atLeast";
+    case "at most":
+      return "atMost";
+    case "at":
+    case "exactly":
+      return "equals";
+    default:
+      throw new Error(`invalid time comparison "${operator}"`);
+  }
 }
 
 function comparisonPredicate(operator: string): string {
@@ -331,6 +378,15 @@ function parsePredicate(text: string): Predicate {
     name: match[1],
     terms,
   };
+}
+
+function parseTimeToMinutes(time: string): number {
+  const match = time.match(timePattern);
+  if (!match) {
+    throw new Error(`invalid time "${time}"`);
+  }
+
+  return Number(match[1]) * 60 + Number(match[2]);
 }
 
 function splitPredicates(text: string): string[] {
@@ -390,6 +446,7 @@ function satisfyBuiltIn(predicate: Predicate, binding: Binding): Binding[] | nul
     above: (left, right) => left > right,
     atLeast: (left, right) => left >= right,
     atMost: (left, right) => left <= right,
+    equals: (left, right) => left === right,
   };
   const compare = comparisons[predicate.name];
   if (!compare) {
